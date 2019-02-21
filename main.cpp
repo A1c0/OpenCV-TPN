@@ -35,8 +35,6 @@ int main() {
         capture >> frame;
         if (frame.empty()) return -1;
 
-        resize(frame, frame, Size(600, 400), 0.0, 0.0, INTER_LINEAR);
-
         // Conversion l'image en niveau de gris
         cvtColor( frame, frameGray, COLOR_RGB2GRAY );
 
@@ -51,7 +49,7 @@ int main() {
         // Trouver les contours
         RNG rng(12345);
         vector<vector<Point> > contours;
-        vector<Point> courbe;
+        vector<Point> courbes;
         vector<Vec4i> hierarchy;
         findContours( dilation_out, contours, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
@@ -60,18 +58,30 @@ int main() {
         for( size_t i = 0; i< contours.size(); i++ )
         {
             double perimetre = arcLength(contours[i], true);
-            approxPolyDP(contours[i], courbe, 0.02*perimetre, true);
-            if (contourArea(courbe) > 5000 && isContourConvex(courbe)) {
+            approxPolyDP(contours[i], courbes, 0.02*perimetre, true);
+            if (contourArea(courbes) > 5000 && isContourConvex(courbes)) {
                 Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
                 drawContours(shape_out, contours, static_cast<int>(i), color, 4, 8, hierarchy, 0, Point());
-                if (courbe.size() == 3) // c'est un triangle
-                    cv::putText(shape_out, "TRIANGLE", courbe[0], cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(0, 255, 0));
-                if (courbe.size() == 4) { // c'est peut être un rectangle
-                    double cos1 = getCosAlKashi(courbe[2], courbe[0], courbe[1]);
-                    double cos2 = getCosAlKashi(courbe[3], courbe[1], courbe[2]);
-                    // or si un quadrilatère a deux angle droit alors , tous ces angles sont droits
-                    if (cos1 < 0.1 && cos1 > -0.1 && cos2 < 0.1 && cos2 > -0.1) // c'est un rectangle
-                        cv::putText(shape_out, "RECTANGLE", courbe[0], cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(0, 255, 0));
+                if (courbes.size() == 3) // c'est un triangle
+                    putText(shape_out, "TRIANGLE", courbes[0], FONT_HERSHEY_PLAIN, 2, Scalar(255, 0, 0));
+                if (courbes.size() == 4) { // c'est peut être un rectangle
+                    double cos1 = getCosAlKashi(courbes[2], courbes[0], courbes[1]);
+                    double cos2 = getCosAlKashi(courbes[3], courbes[1], courbes[2]);
+                    double cos3 = getCosAlKashi(courbes[0], courbes[2], courbes[3]);
+                    // or si un quadrilatère a trois angles droit alors , tous ces angles sont droits
+                    if (cos1 < 0.1 && cos1 > -0.1 && cos2 < 0.1 && cos2 > -0.1 && cos3 < 0.1 && cos3 > -0.1) // c'est un rectangle
+                        putText(shape_out, "RECTANGLE", courbes[0], FONT_HERSHEY_PLAIN, 2, Scalar(255, 0, 0));
+                }
+                else {
+                    Point2f center;
+                    float radius;
+
+                    minEnclosingCircle(courbes, center, radius);
+                    double area = contourArea(courbes);
+
+                    if (0.95 * CV_PI * pow(radius, 2) <= area <= 1.05 * CV_PI * pow(radius, 2)) {
+                        putText(shape_out, "CERCLE", center, FONT_HERSHEY_PLAIN, 2, Scalar(255, 0, 0));
+                    }
                 }
             }
 
@@ -99,9 +109,9 @@ int main() {
 }
 
 double getCosAlKashi (const Point &A, const Point &B, const Point &C) {
-    double CA = cv::norm(Mat(A), Mat(C));
-    double CB = cv::norm(Mat(B), Mat(C));
-    double AB = cv::norm(Mat(B), Mat(A));
+    double CA = norm(Mat(A), Mat(C));
+    double CB = norm(Mat(B), Mat(C));
+    double AB = norm(Mat(B), Mat(A));
 
     return (pow(CA, 2) + pow(CB, 2) - pow(AB, 2))/(2*CA*CB);
 }
