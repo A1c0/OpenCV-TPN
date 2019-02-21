@@ -62,6 +62,8 @@ int main() {
                 Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
                 drawContours(shape_out, contours, (int)i, color, 4, 8, hierarchy, 0, Point());
             }
+            if (courbe.size() == 3)
+                cv::putText(shape_out, "TRIANGLE", courbe[0], cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(0, 255, 0));
         }
 
         // Affichages
